@@ -1,0 +1,69 @@
+name: RDP + Tailscale + Google Drive
+
+on:
+  workflow_dispatch:
+    inputs:
+      ts_authkey:
+        description: "Tailscale Auth Key"
+        required: true
+      runtime_minutes:
+        description: "Runtime"
+        default: "355"
+
+jobs:
+  rdp:
+    runs-on: windows-latest
+    timeout-minutes: 370
+
+    env:
+      RDP_USER: admin
+      RDP_PASS: Admin@123
+
+    steps:
+
+    - name: Install Rclone
+      run: choco install rclone -y
+
+    - name: Install Tailscale
+      run: |
+        $msi="$env:TEMP\tailscale.msi"
+        Invoke-WebRequest https://pkgs.tailscale.com/stable/tailscale-setup-amd64.msi -OutFile $msi
+        Start-Process msiexec.exe -ArgumentList "/i","`"$msi`"","/quiet" -Wait
+
+    - name: Connect Tailscale
+      run: |
+        & "C:\Program Files\Tailscale\tailscale.exe" up --authkey "${{ inputs.ts_authkey }}" --accept-dns=true
+        $ip = & "C:\Program Files\Tailscale\tailscale.exe" ip -4
+        echo "TAILSCALE_IP=$ip" >> $env:GITHUB_ENV
+        echo "Tailscale IP: $ip"
+
+    - name: Enable RDP
+      run: |
+        net user $env:RDP_USER $env:RDP_PASS /add
+        net localgroup administrators $env:RDP_USER /add
+        reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+        netsh advfirewall set allprofiles state off
+
+    - name: Setup Google Drive
+      run: |
+        mkdir %USERPROFILE%\.config\rclone
+        echo %GDRIVE_CONFIG% > %USERPROFILE%\.config\rclone\rclone.conf
+
+    - name: Mount Google Drive
+      run: |
+        mkdir C:\gdrive
+        rclone mount gdrive: C:\gdrive --vfs-cache-mode full --buffer-size 256M
+
+    - name: Install RustDesk
+      run: |
+        $msi="$env:TEMP\rustdesk.msi"
+        Invoke-WebRequest https://github.com/rustdesk/rustdesk/releases/download/1.3.1/rustdesk-1.3.1-x86_64.msi -OutFile $msi
+        Start-Process msiexec.exe -ArgumentList "/i","`"$msi`"","/quiet" -Wait
+
+    - name: Keep Alive
+      run: |
+        $end=(Get-Date).AddMinutes([int]"${{ inputs.runtime_minutes }}")
+        while((Get-Date) -lt $end){
+          Write-Host "Alive | IP: $env:TAILSCALE_IP"
+          Start-Sleep 60
+        }
