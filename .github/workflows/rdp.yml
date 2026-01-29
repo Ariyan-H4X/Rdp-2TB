@@ -36,13 +36,10 @@ jobs:
     - name: Setup Google Drive
       run: |
         mkdir "$env:APPDATA\rclone"
-        $conf = @"
-[gdrive]
-type = drive
-scope = drive
-token = ${{ secrets.GDRIVE_CONFIG }}
-"@
-        Set-Content "$env:APPDATA\rclone\rclone.conf" $conf
+        echo "[gdrive]" > "$env:APPDATA\rclone\rclone.conf"
+        echo "type = drive" >> "$env:APPDATA\rclone\rclone.conf"
+        echo "scope = drive" >> "$env:APPDATA\rclone\rclone.conf"
+        echo "token = ${{ secrets.GDRIVE_CONFIG }}" >> "$env:APPDATA\rclone\rclone.conf"
 
     - name: Mount Drive
       run: |
