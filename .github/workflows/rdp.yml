@@ -1,0 +1,35 @@
+name: RDP + Google Drive
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rdp:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+
+    - name: Install Rclone
+      run: choco install rclone -y
+
+    - name: Create RDP User
+      run: |
+        net user admin Admin@123 /add
+        net localgroup administrators admin /add
+        reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+        netsh advfirewall set allprofiles state off
+
+    - name: Setup Google Drive
+      run: |
+        mkdir %USERPROFILE%\.config\rclone
+        echo "${{ secrets.GDRIVE_CONFIG }}" > %USERPROFILE%\.config\rclone\rclone.conf
+
+    - name: Mount Drive
+      run: |
+        mkdir G:
+        rclone mount gdrive: G: --vfs-cache-mode full
+
+    - name: Keep Alive
+      run: |
+        timeout /t 21600
