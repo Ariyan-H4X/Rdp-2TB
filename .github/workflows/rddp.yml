@@ -1,4 +1,4 @@
-name: RDP + Tailscale + Google Drive
+Name: RDP + Tailscale + Google Drive
 
 on:
   workflow_dispatch:
@@ -58,9 +58,15 @@ jobs:
     # Setup Google Drive (FIXED)
     # -------------------------
     - name: Setup Google Drive
+      env:
+        # Pass the secret as an environment variable here
+        RCLONE_CONF_CONTENT: ${{ secrets.GDRIVE_CONFIG }}
       run: |
-        mkdir "$env:APPDATA\rclone"
-        Set-Content -Path "$env:APPDATA\rclone\rclone.conf" -Value "${{ secrets.GDRIVE_CONFIG }}" -Encoding UTF8
+        $configPath = "$env:APPDATA\rclone"
+        # Ensure directory exists (idempotent check)
+        if (!(Test-Path $configPath)) { New-Item -ItemType Directory -Path $configPath -Force }
+        # Write the env variable to file (Safely handles multiline strings)
+        Set-Content -Path "$configPath\rclone.conf" -Value $env:RCLONE_CONF_CONTENT -Encoding UTF8
 
     # -------------------------
     # Mount Google Drive
@@ -89,3 +95,4 @@ jobs:
           Write-Host "Alive | IP: $env:TAILSCALE_IP"
           Start-Sleep 60
         }
+        
