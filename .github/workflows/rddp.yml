@@ -25,11 +25,10 @@ jobs:
     # Install rclone
     # -------------------------
     - name: Install rclone
-      run: |
-        choco install rclone -y
+      run: choco install rclone -y
 
     # -------------------------
-    # Install Tailscale (FIXED)
+    # Install Tailscale
     # -------------------------
     - name: Install Tailscale
       run: |
@@ -56,12 +55,12 @@ jobs:
         netsh advfirewall set allprofiles state off
 
     # -------------------------
-    # Setup Google Drive
+    # Setup Google Drive (FIXED)
     # -------------------------
     - name: Setup Google Drive
       run: |
-        mkdir %USERPROFILE%\.config\rclone
-        echo %GDRIVE_CONFIG% > %USERPROFILE%\.config\rclone\rclone.conf
+        mkdir "$env:APPDATA\rclone"
+        Set-Content -Path "$env:APPDATA\rclone\rclone.conf" -Value "${{ secrets.GDRIVE_CONFIG }}" -Encoding UTF8
 
     # -------------------------
     # Mount Google Drive
@@ -69,7 +68,7 @@ jobs:
     - name: Mount Google Drive
       run: |
         mkdir C:\gdrive
-        rclone mount gdrive: C:\gdrive --vfs-cache-mode full --buffer-size 256M
+        Start-Process rclone -ArgumentList "mount gdrive: C:\gdrive --vfs-cache-mode full --buffer-size 256M" -NoNewWindow
 
     # -------------------------
     # Install RustDesk
