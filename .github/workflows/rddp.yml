@@ -21,15 +21,23 @@ jobs:
 
     steps:
 
-    - name: Install Rclone
-      run: choco install rclone -y
+    # -------------------------
+    # Install rclone
+    # -------------------------
+    - name: Install rclone
+      run: |
+        choco install rclone -y
 
+    # -------------------------
+    # Install Tailscale (FIXED)
+    # -------------------------
     - name: Install Tailscale
       run: |
-        $msi="$env:TEMP\tailscale.msi"
-        Invoke-WebRequest https://pkgs.tailscale.com/stable/tailscale-setup-amd64.msi -OutFile $msi
-        Start-Process msiexec.exe -ArgumentList "/i","`"$msi`"","/quiet" -Wait
+        winget install --id Tailscale.Tailscale --accept-package-agreements --accept-source-agreements
 
+    # -------------------------
+    # Connect Tailscale
+    # -------------------------
     - name: Connect Tailscale
       run: |
         & "C:\Program Files\Tailscale\tailscale.exe" up --authkey "${{ inputs.ts_authkey }}" --accept-dns=true
@@ -37,6 +45,9 @@ jobs:
         echo "TAILSCALE_IP=$ip" >> $env:GITHUB_ENV
         echo "Tailscale IP: $ip"
 
+    # -------------------------
+    # Enable RDP
+    # -------------------------
     - name: Enable RDP
       run: |
         net user $env:RDP_USER $env:RDP_PASS /add
@@ -44,22 +55,34 @@ jobs:
         reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
         netsh advfirewall set allprofiles state off
 
+    # -------------------------
+    # Setup Google Drive
+    # -------------------------
     - name: Setup Google Drive
       run: |
         mkdir %USERPROFILE%\.config\rclone
         echo %GDRIVE_CONFIG% > %USERPROFILE%\.config\rclone\rclone.conf
 
+    # -------------------------
+    # Mount Google Drive
+    # -------------------------
     - name: Mount Google Drive
       run: |
         mkdir C:\gdrive
         rclone mount gdrive: C:\gdrive --vfs-cache-mode full --buffer-size 256M
 
+    # -------------------------
+    # Install RustDesk
+    # -------------------------
     - name: Install RustDesk
       run: |
         $msi="$env:TEMP\rustdesk.msi"
         Invoke-WebRequest https://github.com/rustdesk/rustdesk/releases/download/1.3.1/rustdesk-1.3.1-x86_64.msi -OutFile $msi
         Start-Process msiexec.exe -ArgumentList "/i","`"$msi`"","/quiet" -Wait
 
+    # -------------------------
+    # Keep Alive
+    # -------------------------
     - name: Keep Alive
       run: |
         $end=(Get-Date).AddMinutes([int]"${{ inputs.runtime_minutes }}")
