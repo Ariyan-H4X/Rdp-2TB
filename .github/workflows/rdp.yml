@@ -1,4 +1,4 @@
-name: RDP + Google Drive
+name: RDP + Google Drive + Tailscale
 
 on:
   workflow_dispatch:
@@ -13,6 +13,11 @@ jobs:
     - name: Install Rclone
       run: choco install rclone -y
 
+    - name: Install Tailscale
+      run: |
+        choco install tailscale -y
+        tailscale up --authkey ${{ secrets.TS_AUTHKEY }} --accept-dns=true
+
     - name: Create RDP User
       run: |
         net user admin Admin@123 /add
@@ -20,15 +25,19 @@ jobs:
         reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
         netsh advfirewall set allprofiles state off
 
-    - name: Setup Google Drive
+    - name: Setup Google Drive Config
       run: |
         mkdir %USERPROFILE%\.config\rclone
-        echo "${{ secrets.GDRIVE_CONFIG }}" > %USERPROFILE%\.config\rclone\rclone.conf
+        echo %GDRIVE_CONFIG% > %USERPROFILE%\.config\rclone\rclone.conf
 
-    - name: Mount Drive
+    - name: Mount Google Drive (FIXED)
       run: |
-        mkdir G:
-        rclone mount gdrive: G: --vfs-cache-mode full
+        mkdir C:\gdrive
+        rclone mount gdrive: C:\gdrive --vfs-cache-mode full --buffer-size 256M
+
+    - name: Show Tailscale IP
+      run: |
+        tailscale ip -4
 
     - name: Keep Alive
       run: |
